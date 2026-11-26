@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Piece Voyage Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: adventurous, warm, playful — a pirate's logbook
+   IDEA: a sea chart of the Grand Line; your progress is a ship sailing island to island
+   PICTURE: wavy route across 11 saga islands with a ship at your spot; each saga card carries its own scene
+   COLOUR and TYPE: deep ocean blue, parchment, treasure gold, a flag colour per saga; Bangers + Nunito
+   LAYOUT: ocean hero with chart, Up next card, search toolbar, saga cards with tappable episode grids */
+:root{color-scheme:light dark;
+  --paper:light-dark(#fbf3e1,#081726);--card:light-dark(#fffaf0,#0f2236);--surface:light-dark(#fff,#16304a);
+  --ink:light-dark(#1a2333,#e8eef6);--muted:light-dark(#6f6857,#9db1c6);--line:light-dark(#e6d8b8,#24405c);
+  --shadow:light-dark(#1a2333,#000);--sea:#0a2540;--sea2:#114a75;--gold:#f5b82e;--red:#e0442f;
+  --canon:light-dark(#2563a8,#8cc0ff);--canonbg:light-dark(#e7f0fb,#15365a);--filler:light-dark(#c8632a,#ffab78);--fillerbg:light-dark(#fcebdd,#4a2716);
+  --done:light-dark(#114a75,#3d8bd0)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Nunito",system-ui,sans-serif;overflow-x:clip;transition:background .3s}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.hero{background:radial-gradient(120% 90% at 80% 0%,#1d6aa0 0,transparent 60%),linear-gradient(180deg,var(--sea2),var(--sea));color:#fff;padding:22px 16px 72px;position:relative;overflow:hidden}
+.night .hero{background:radial-gradient(120% 90% at 80% 0%,#163d63 0,transparent 60%),linear-gradient(180deg,#0b2238,#040d18)}
+.hero::after{content:"";position:absolute;inset:auto 0 -1px;height:40px;background:var(--paper);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'%3E%3Cpath d='M0 20q20-14 40 0t40 0V40H0z'/%3E%3C/svg%3E") repeat-x bottom/80px 40px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40'%3E%3Cpath d='M0 20q20-14 40 0t40 0V40H0z'/%3E%3C/svg%3E") repeat-x bottom/80px 40px}
+.stars{position:absolute;inset:0;opacity:0;transition:opacity .5s;pointer-events:none;
+  background-image:radial-gradient(1.5px 1.5px at 12% 20%,#fff,transparent),radial-gradient(1px 1px at 30% 8%,#fff,transparent),radial-gradient(1.5px 1.5px at 55% 15%,#fff,transparent),radial-gradient(1px 1px at 70% 30%,#fff,transparent),radial-gradient(1.5px 1.5px at 88% 12%,#fff,transparent),radial-gradient(1px 1px at 42% 34%,#fff,transparent)}
+.night .stars{opacity:.8}
+.wrap{max-width:1100px;margin:0 auto;position:relative}
+.top{display:flex;align-items:flex-start;gap:12px}
+h1{flex:1;font:400 clamp(40px,10vw,64px)/.95 "Bangers",cursive;letter-spacing:1.5px;margin:0;color:var(--gold);text-shadow:3px 3px 0 var(--red),6px 6px 0 rgba(0,0,0,.25)}
+.theme{flex:none;width:48px;height:48px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);display:grid;place-items:center}
+.tagline{margin:6px 0 16px;color:#cfe3f3;font-weight:700}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{flex:1 1 120px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:8px 14px}
+.stat b{display:block;font:400 30px/1 "Bangers",cursive;letter-spacing:1px;color:#fff}
+.stat span{font-size:13px;color:#cfe3f3;font-weight:700}
+.chart{margin-top:16px;overflow-x:auto;scrollbar-width:none;border-radius:16px;background:rgba(0,20,40,.35);border:1px solid rgba(255,255,255,.15)}
+.chart::-webkit-scrollbar{display:none}
+.chart svg{display:block;min-width:900px;width:100%;height:auto}
+.isle{cursor:pointer}.isle text{font:800 13px "Nunito",sans-serif;fill:#e8f2fb;text-anchor:middle}
+.ship{transition:transform .8s cubic-bezier(.3,.7,.3,1)}
+.bob{animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px) rotate(-3deg)}}
+@media (prefers-reduced-motion:reduce){.bob{animation:none}.ship{transition:none}}
+
+.next{position:relative;z-index:2;margin:-56px auto 0;max-width:1100px;padding:0 16px}
+.nextcard{background:var(--card);border:3px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--shadow);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.nextnum{font:400 52px/0.9 "Bangers",cursive;color:var(--red);letter-spacing:1px}
+.nextnum small{display:block;font:800 12px "Nunito";color:var(--muted);letter-spacing:0}
+.nextinfo{flex:1 1 140px}
+.nextinfo strong{font-size:18px;font-weight:900;display:block;line-height:1.2}
+.nextinfo span{color:var(--muted);font-size:14px;font-weight:700}
+.nextinfo a{color:var(--canon);font-weight:800;font-size:14px}
+.must,.nextinfo .must{display:inline-block;background:var(--gold);color:#1a2333;border-radius:99px;padding:0 8px;font-size:12px;font-weight:900;margin-left:4px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;border:2.5px solid var(--ink);background:var(--surface);font-weight:900}
+.btn.primary{background:var(--gold);color:#1a2333;box-shadow:3px 3px 0 var(--shadow)}
+.btn.primary:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.btn:disabled{opacity:.4}
+
+.toolbar{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);border-bottom:2px solid var(--line);margin-top:18px}
+.toolbar .wrap{display:flex;align-items:center;gap:8px;padding:8px 16px;flex-wrap:wrap}
+.search{flex:1 1 200px;position:relative}
+.search input{width:100%;height:44px;border-radius:12px;border:2px solid var(--ink);background:var(--surface);padding:0 12px 0 38px;font-size:16px;font-weight:700}
+.search svg{position:absolute;left:11px;top:12px;pointer-events:none}
+.chip{min-height:44px;padding:0 14px;border-radius:99px;border:2px solid var(--ink);background:var(--surface);font-weight:800;font-size:14px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.mini{flex-basis:100%;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.mini i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--gold));transition:width .4s}
+.result{max-width:1100px;margin:12px auto 0;padding:0 16px;display:none}
+.result.show{display:block}
+.result div{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 14px;font-weight:700;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.result a{color:var(--canon)}
+
+main{padding:18px 16px 8px;display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.saga{background:var(--card);border:3px solid var(--ink);border-radius:18px;overflow:hidden;box-shadow:5px 5px 0 color-mix(in srgb,var(--shadow) 22%,transparent);align-self:start;scroll-margin-top:80px}
+.shead{background:var(--c);color:#fff;padding:14px;display:flex;align-items:center;gap:12px;position:relative;min-height:84px;overflow:hidden}
+.scene{position:absolute;right:0;bottom:0;height:100%;width:170px;opacity:.32;pointer-events:none}
+.medal{flex:none;width:42px;height:42px;border-radius:50%;background:#fff;color:var(--c);border:3px solid #1a2333;display:grid;place-items:center;font:400 24px/1 "Bangers",cursive;position:relative}
+.shead>div{position:relative}
+.shead h2{margin:0;font:400 26px/1 "Bangers",cursive;letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,.3)}
+.shead small{display:block;font-size:13px;font-weight:800;opacity:.92}
+.shead .sp{margin-left:auto;text-align:right;font:400 20px/1 "Bangers",cursive;letter-spacing:1px}
+.sbar{height:6px;background:rgba(0,0,0,.15)}.sbar i{display:block;height:100%;width:0;background:var(--gold);transition:width .4s}
+.stamp{display:none;position:absolute;right:12px;bottom:6px;background:var(--gold);color:#1a2333;border:2px solid #1a2333;border-radius:6px;padding:1px 8px;font:400 14px/1.2 "Bangers";letter-spacing:1px;transform:rotate(-4deg)}
+.saga.complete .stamp{display:block}
+
+.arc{border-top:2px dashed var(--line)}.arc:first-child{border-top:0}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.row input{appearance:none;flex:none;width:28px;height:28px;border:2.5px solid var(--ink);border-radius:8px;background:var(--surface);cursor:pointer;margin:0}
+.row input:checked{background:var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%231a2333' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/20px no-repeat;border-color:#1a2333}
+.row input:indeterminate{background:#fde7b0 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12h12' stroke='%231a2333' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E") center/18px no-repeat;border-color:#1a2333}
+.name{flex:1;cursor:pointer}
+.name strong{font-weight:900}
+.pill{display:inline-block;margin-left:6px;padding:0 8px;border-radius:99px;font-size:12px;font-weight:800;vertical-align:2px;border:1.5px solid}
+.pill.canon{color:var(--canon);background:var(--canonbg)}.pill.filler{color:var(--filler);background:var(--fillerbg)}.pill.ongoing{color:#fff;background:var(--red);border-color:var(--red)}
+.eps{display:block;font-size:13px;color:var(--muted);font-weight:700}
+.done .name strong{color:var(--muted);text-decoration:line-through 2.5px var(--red)}
+.count{font-size:13px;color:var(--muted);font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tog{flex:none;width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.tog svg{transition:transform .25s}.open .tog svg{transform:rotate(180deg)}
+.grid{display:none;padding:2px 14px 14px;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
+.open .grid{display:grid}
+.ep{position:relative;font:800 14px/1 "Nunito",sans-serif;font-variant-numeric:tabular-nums;height:42px;display:grid;place-items:center;border:2px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;user-select:none;transition:transform .1s}
+.ep:active{transform:scale(.92)}
+.ep.f{border-style:dashed;border-color:var(--filler);color:var(--filler)}
+.ep.w{background:var(--done);border-color:var(--done);color:#fff}
+.ep.f.w{background:var(--filler);border-color:var(--filler);color:#fff}
+.ep.nx{border-color:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 35%,transparent)}
+.ep.m::after{content:"";position:absolute;top:-6px;right:-5px;width:16px;height:16px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l3 6.5 7 .8-5.2 4.8 1.4 7L12 17.6 5.8 21.1l1.4-7L2 9.3l7-.8z' fill='%23f5b82e' stroke='%231a2333' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.ep.hit{animation:hit 1.2s 2}
+@keyframes hit{50%{transform:scale(1.18);box-shadow:0 0 0 5px var(--gold)}}
+.hidefiller .ep.f,.hidefiller .arc.filler{display:none}
+.arc.nomatch,.saga.nomatch{display:none}
+.empty{display:none;text-align:center;color:var(--muted);font-weight:800;padding:20px}
+.ep{-webkit-touch-callout:none;-webkit-user-select:none;touch-action:manipulation}
+.ep.press{animation:press .45s linear forwards}
+@keyframes press{to{transform:scale(.86);background:var(--gold);color:#1a2333;border-color:var(--gold)}}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(4,12,24,0);display:flex;align-items:flex-end;justify-content:center;transition:background .2s}
+.sheet[hidden]{display:none}
+.sheet.on{background:rgba(4,12,24,.55)}
+.sheetbox{width:min(560px,100%);background:var(--card);border:3px solid var(--ink);border-bottom:0;border-radius:22px 22px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .22s ease-out}
+.sheet.on .sheetbox{transform:none}
+.grab{width:44px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 10px}
+.sheetbox h3{margin:0;font:400 40px/1 "Bangers",cursive;letter-spacing:1px;color:var(--red)}
+.sheetbox p{margin:4px 0 8px;font-weight:800}
+.shtags{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.shtags .pill{margin:0}
+.shstate{font-size:13px;font-weight:800;color:var(--muted)}
+.sheetbox{max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
+.story{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.story h4{margin:0 0 6px;font-size:18px;font-weight:900;line-height:1.25}
+.story h4:empty{display:none}
+#stText{font-size:16px;line-height:1.6}
+#stText{margin:8px 0}
+.stnote{margin:6px 0 0;font-size:13px;color:var(--muted);font-weight:700}
+.stnote a{color:var(--canon)}
+#story details{margin:4px 0 8px}#story summary{cursor:pointer;font-weight:900;color:var(--red);min-height:32px;display:flex;align-items:center}#story details p{margin:6px 0 0}
+.btn.big{display:flex;align-items:center;justify-content:center;width:100%;text-decoration:none;margin-bottom:10px;font-size:17px}
+.sheetbox .btns .btn{flex:1}
+@media (prefers-reduced-motion:reduce){.sheet,.sheetbox{transition:none}}
+.code{width:100%;border:2px solid var(--line);border-radius:12px;background:var(--surface);padding:10px;font:700 15px/1.4 ui-monospace,Menlo,monospace;margin-bottom:10px;resize:vertical}
+footer{text-align:center;color:var(--muted);font-size:13px;font-weight:700;padding:20px 16px 40px;max-width:760px;margin:0 auto}
+.legend{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+footer a{color:var(--canon)}
+#progMsg{flex-basis:100%;min-height:1.2em}
+.epi{border-color:var(--gold)}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="stars"></div>
+  <div class="wrap">
+    <div class="top">
+      <h1>One Piece Voyage Log</h1>
+      <button class="theme" id="theme" type="button" aria-label="Switch to night sea"></button>
+    </div>
+    <p class="tagline">Every arc and every episode, from Romance Dawn to Elbaf.</p>
+    <div class="stats">
+      <div class="stat"><b id="pct">0%</b><span>of the voyage</span></div>
+      <div class="stat"><b id="watched">0</b><span>of <span id="total">0</span> episodes</span></div>
+      <div class="stat"><b id="arcs">0</b><span>arcs cleared</span></div>
+      <div class="stat"><b id="stars">0</b><span>must-watch seen</span></div>
+    </div>
+    <div class="chart" id="chart"></div>
+  </div>
+</header>
+
+<section class="next">
+  <div class="nextcard">
+    <div class="nextnum"><small>Up next</small><span id="nextNum">Ep 1</span></div>
+    <div class="nextinfo"><strong id="nextArc">Romance Dawn</strong><span id="nextSaga">East Blue Saga</span><br><a id="nextLink" href="#" target="_blank" rel="noopener">Episode title and summary</a></div>
+    <div class="btns">
+      <button class="btn primary" id="markNext" type="button">Watched it</button>
+      <button class="btn" id="openNext" type="button">Show arc</button>
+    </div>
+  </div>
+</section>
+
+<div class="toolbar"><div class="wrap">
+  <label class="search"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    <input id="q" type="search" placeholder="Search an arc or episode number" aria-label="Search an arc, saga or episode number" autocomplete="off"></label>
+  <button class="chip" id="filler" type="button" aria-pressed="false">Skip filler</button>
+  <button class="chip" id="mustOnly" type="button" aria-pressed="false">Must-watch</button>
+  <button class="chip" id="backup" type="button">Backup</button>
+  <button class="chip" id="reset" type="button">Reset</button>
+  <div class="mini" aria-hidden="true"><i id="bar"></i></div>
+</div></div>
+<div class="result" id="result"><div id="resultBody"></div></div>
+
+<main class="wrap" id="main"></main>
+<div class="sheet" id="sheet" hidden><div class="sheetbox" role="dialog" aria-modal="true" aria-labelledby="shNum">
+  <div class="grab" aria-hidden="true"></div>
+  <h3 id="shNum">Episode 1</h3>
+  <p id="shArc"></p>
+  <div id="shTags" class="shtags"></div>
+  <div class="story epi" id="epi" hidden>
+    <h4 id="epTitle"></h4>
+    <p id="epText"></p>
+    <p class="stnote">Episode details from MyAnimeList via the Jikan API.</p>
+  </div>
+  <div class="story" id="story">
+    <h4 id="stTitle"></h4>
+    <p id="stWhere" class="stnote"></p>
+    <p id="stText"></p>
+    <details id="stEnd"><summary>How the arc ends (spoilers)</summary><p id="stEndText"></p></details>
+    <p class="stnote"><a id="shStory" href="#" target="_blank" rel="noopener">This episode on the One Piece wiki</a></p>
+  </div>
+  <div class="btns"><button class="btn" id="shMark" type="button">Watched up to here</button><button class="btn" id="shClose" type="button">Close</button></div>
+</div></div>
+<div class="sheet" id="bk" hidden><div class="sheetbox" role="dialog" aria-modal="true" aria-labelledby="bkTitle">
+  <div class="grab" aria-hidden="true"></div>
+  <h3 id="bkTitle">Backup</h3>
+  <p>Copy this code to move your progress to another copy of the checklist or another device.</p>
+  <textarea id="bkCode" class="code" rows="3" readonly aria-label="Your progress code"></textarea>
+  <button class="btn primary big" id="bkCopy" type="button">Copy code</button>
+  <p>To load progress, paste a code here. It replaces what's ticked now.</p>
+  <textarea id="bkIn" class="code" rows="3" aria-label="Paste a progress code"></textarea>
+  <p class="stnote" id="bkMsg" role="status"></p>
+  <div class="btns"><button class="btn" id="bkLoad" type="button">Load progress</button><button class="btn" id="bkClose" type="button">Close</button></div>
+</div></div>
+<p class="empty" id="empty">No arcs match that search.</p>
+
+<footer>
+  <div class="legend"><span class="pill canon">canon</span><span class="pill filler">filler</span><span class="pill ongoing">ongoing</span><span class="must">must-watch</span></div>
+  Tap an episode to see its details and read its story. Long-press the last episode you watched: everything before it gets ticked and everything after it is cleared. Long-press it again to untick it. Arc boxes tick or clear only that arc.<br>
+  Dashed numbers are filler, following <a href="https://www.animefillerlist.com/shows/one-piece" target="_blank" rel="noopener">Anime Filler List</a>. Gold stars are a hand-picked list of standout episodes. Elbaf lists the 26 episodes scheduled for 2026.<br>
+  Your progress is saved in this browser. Use Backup to move it to another copy or device.<br>
+  Episode titles and synopses come from MyAnimeList via the Jikan API, and only load on a self-hosted copy of this page.
+</footer>
+
+<script>
+{
+const SAGAS = [
+  ["East Blue","#2563a8","sea",[["Romance Dawn","canon",[[1,3]]],["Orange Town","canon",[[4,8]]],["Syrup Village","canon",[[9,18]]],["Baratie","canon",[[19,30]]],["Arlong Park","canon",[[31,44]]],["Loguetown","canon",[[45,53]]],["Warship Island","filler",[[54,61]]]]],
+  ["Alabasta","#d0812a","desert",[["Reverse Mountain","canon",[[62,63]]],["Whisky Peak","canon",[[64,67]]],["Coby & Helmeppo","canon",[[68,69]]],["Little Garden","canon",[[70,77]]],["Drum Island","canon",[[78,91]]],["Alabasta","canon",[[92,130]]],["Post-Alabasta","filler",[[131,135]]]]],
+  ["Sky Island","#3a9a5b","clouds",[["Goat Island","filler",[[136,138]]],["Ruluka Island","filler",[[139,143]]],["Jaya","canon",[[144,152]]],["Skypiea","canon",[[153,195]]],["G-8","filler",[[196,206]]]]],
+  ["Water 7","#1c8fb0","city",[["Long Ring Long Land","canon",[[207,219]]],["Ocean's Dream","filler",[[220,224]]],["Foxy's Return","filler",[[225,226]]],["Water 7","canon",[[227,263]]],["Enies Lobby","canon",[[264,312]]],["Post-Enies Lobby","canon",[[313,325]]]]],
+  ["Thriller Bark","#5e3f99","haunt",[["Ice Hunter","filler",[[326,336]]],["Thriller Bark","canon",[[337,381]]],["Spa Island","filler",[[382,384]]]]],
+  ["Summit War","#c0392b","fort",[["Sabaody Archipelago","canon",[[385,405]]],["Boss Luffy Specials","filler",[[406,407]]],["Amazon Lily","canon",[[408,421]]],["Impel Down","canon",[[422,425],[430,456]]],["Little East Blue","filler",[[426,429]]],["Marineford","canon",[[457,489]]],["Post-War","canon",[[490,516]]]]],
+  ["Fish-Man Island","#139c97","reef",[["Return to Sabaody","canon",[[517,522]]],["Fish-Man Island","canon",[[523,574]]]]],
+  ["Dressrosa","#d0457a","arena",[["Z's Ambition","filler",[[575,578]]],["Punk Hazard","canon",[[579,625]]],["Caesar Retrieval","filler",[[626,628]]],["Dressrosa","canon",[[629,746]]]]],
+  ["Whole Cake Island","#9b4fb8","cake",[["Silver Mine","filler",[[747,750]]],["Zou","canon",[[751,779]]],["Marine Rookie","filler",[[780,782]]],["Whole Cake Island","canon",[[783,877]]],["Reverie","canon",[[878,889]]]]],
+  ["Wano Country","#8e1c1c","torii",[["Wano Country","canon",[[890,894],[897,1028],[1031,1085]]],["Cidre Guild","filler",[[895,896]]],["Uta's Past","filler",[[1029,1030]]]]],
+  ["Final","#b98a1d","tree",[["Egghead","canon",[[1086,1155]]],["Elbaf","ongoing",[[1156,1181]]]]],
+];
+// pure filler episodes, per animefillerlist.com (updated June 2026)
+const FILLER = [[54,60],[98,99],[102,102],[131,143],[196,206],[220,225],[279,283],[291,292],[303,303],[317,319],[326,336],[382,384],[406,407],[426,429],[457,458],[492,492],[542,542],[575,578],[590,590],[626,627],[747,750],[780,782],[895,896],[907,907],[1029,1030]];
+// hand-picked standout episodes
+const MUST = new Set([1,37,91,130,278,312,377,483,1000,1015,1062,1071]);
+const SCENES = {
+  sea:'<path d="M0 70q20-8 40 0t40 0 40 0 40 0 40 0V100H0z" fill="#fff"/><ellipse cx="120" cy="66" rx="34" ry="8" fill="#fff"/><path d="M118 64q-2-24 4-36M122 28q14-4 22 6M122 28q-12-6-22 2M122 28q4-12 16-12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>',
+  desert:'<circle cx="130" cy="30" r="16" fill="#fff"/><path d="M0 80q40-30 80-6t90-10V100H0z" fill="#fff"/><path d="M40 74l14-30 14 30z" fill="#fff"/>',
+  clouds:'<path d="M20 70a16 16 0 0 1 20-20 22 22 0 0 1 40 4 14 14 0 0 1 12 16z" fill="#fff"/><path d="M90 40a12 12 0 0 1 16-14 18 18 0 0 1 32 4 11 11 0 0 1 10 12z" fill="#fff"/>',
+  city:'<path d="M10 100V50h22V30h18v20h16V40h20v60zM100 100V36l14-12 14 12v64zM136 100V56h26v44z" fill="#fff"/><path d="M0 92h170" stroke="#fff" stroke-width="6"/>',
+  haunt:'<circle cx="120" cy="30" r="18" fill="#fff"/><path d="M30 100V60l-14-14M30 72l16-18M30 60l-6-20" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M70 100V62h40v38zM66 62l24-20 24 20z" fill="#fff"/>',
+  fort:'<path d="M30 100V40h14v8h10v-8h14v8h10v-8h14v60zM120 100V20h20v80z" fill="#fff"/><path d="M130 20V4l14 5-14 5" fill="#fff"/>',
+  reef:'<circle cx="110" cy="44" r="34" fill="none" stroke="#fff" stroke-width="4"/><circle cx="40" cy="30" r="6" fill="none" stroke="#fff" stroke-width="3"/><circle cx="60" cy="54" r="4" fill="none" stroke="#fff" stroke-width="3"/><path d="M30 100V76M30 84l-10-10M30 80l10-12M150 100V70M150 80l10-8" stroke="#fff" stroke-width="5" stroke-linecap="round"/>',
+  arena:'<path d="M14 100V58q72-34 144 0v42z" fill="#fff"/><path d="M34 100V80a8 8 0 0 1 16 0v20M66 100V76a8 8 0 0 1 16 0v24M98 100V76a8 8 0 0 1 16 0v24M130 100V80a8 8 0 0 1 16 0v20" fill="#000" opacity=".5"/>',
+  cake:'<path d="M40 100V76h90v24zM52 76V56h66v20zM64 56V40h42v16z" fill="#fff"/><path d="M85 40V26" stroke="#fff" stroke-width="4"/><circle cx="85" cy="22" r="5" fill="#fff"/>',
+  torii:'<path d="M10 100l50-60 30 30 20-20 50 50z" fill="#fff" opacity=".6"/><path d="M50 30h80M56 42h68M64 30v70M116 30v70" stroke="#fff" stroke-width="7" stroke-linecap="round"/>',
+  tree:'<path d="M80 100V50" stroke="#fff" stroke-width="12"/><circle cx="80" cy="36" r="26" fill="#fff"/><circle cx="54" cy="48" r="16" fill="#fff"/><circle cx="108" cy="48" r="16" fill="#fff"/>'
+};
+// arc summaries: [what's happening, how it ends]
+const STORY = {
+"Romance Dawn":["Monkey D. Luffy, a boy whose body turned to rubber after eating a Devil Fruit, sets out to sea to become King of the Pirates. He meets Coby, a timid boy who dreams of joining the Marines, and the swordsman Roronoa Zoro, who is tied up at a Marine base run by the bully Captain Morgan.","Luffy beats Morgan, Zoro becomes his first crewmate, and Coby joins the Marines. Flashbacks show how Shanks lost his arm saving young Luffy and left him the straw hat."],
+"Orange Town":["Luffy is blasted into a town that Buggy the Clown's pirates have taken over. He teams up with Nami, a thief who only steals from pirates.","Zoro beats Buggy's first mate, Luffy sends Buggy flying, and Nami decides to travel with them for now."],
+"Syrup Village":["Looking for a ship, the crew reaches the home of Usopp, a boy who tells tall tales to cheer up Kaya, a sick rich girl. Her polite butler is secretly Captain Kuro, who plans to kill her for her fortune.","Usopp and the crew fight Kuro's Black Cat Pirates, and Luffy defeats Kuro. Kaya gives them the Going Merry, and Usopp joins the crew."],
+"Baratie":["At a floating restaurant, Luffy has to work off a debt and meets the fiery cook Sanji. The starving pirate Don Krieg arrives with his fleet, and Zoro challenges Mihawk, the world's greatest swordsman.","Zoro loses to Mihawk and swears never to lose again. Luffy defeats Krieg, Sanji leaves the restaurant to join the crew, and Nami runs off with the Going Merry."],
+"Arlong Park":["The crew follows Nami to her home village, which the fish-man pirate Arlong has ruled for years. Nami has been stealing money to buy the village's freedom.","Arlong breaks his deal, and Nami finally asks Luffy for help. The crew destroys Arlong Park, the village is free, Nami officially joins, and Luffy gets his first bounty."],
+"Loguetown":["The crew stops at the town where Gol D. Roger was executed, the last stop before the Grand Line. Zoro buys new swords and the Marine captain Smoker hunts them.","Buggy nearly executes Luffy on Roger's scaffold, but a lightning strike saves him. A mysterious man helps them escape, and they head for the Grand Line."],
+"Warship Island":["Anime-only story. The crew rescues Apis, a girl escaping the Marines with a secret about a legendary dragon.","The crew helps Apis protect the old dragon and get it home to Lost Island, fighting off the Marines who want its power."],
+"Reverse Mountain":["The Going Merry sails up a mountain river into the Grand Line and meets Laboon, a giant whale waiting for his old pirate crew to return.","Luffy promises Laboon a rematch one day. The crew gets a Log Pose and picks up two odd passengers, Mr. 9 and Miss Wednesday."],
+"Whisky Peak":["A town of friendly people throws the crew a huge party, but they are secretly bounty hunters working for a crime group called Baroque Works.","Zoro beats them all. Miss Wednesday turns out to be Princess Vivi of Alabasta, and the crew agrees to take her home to stop Baroque Works' boss from taking her country."],
+"Coby & Helmeppo":["Side story: Coby and Helmeppo train as new Marines under the tough Vice Admiral Garp.","They keep growing stronger, chasing Luffy's trail from the other side of the law."],
+"Little Garden":["On a jungle island full of dinosaurs, the crew meets two giants who have been fighting a duel for 100 years.","Baroque Works agents try to trap the crew in wax. Luffy and Usopp save everyone, but Nami falls seriously ill."],
+"Drum Island":["To save Nami, the crew lands on a snowy island with no doctor except the old Dr. Kureha. They meet Chopper, a reindeer who ate a Devil Fruit and became part human.","Chopper's sad past with his mentor Hiriluk is revealed. Luffy beats the cruel former king Wapol, and Chopper joins as the ship's doctor."],
+"Alabasta":["Vivi's desert kingdom is falling into civil war, secretly caused by Crocodile, one of the Seven Warlords. The crew races to stop the fighting.","Each crew member beats a Baroque Works officer, and Luffy defeats Crocodile on the third try. The rain returns, Vivi stays home, and Nico Robin joins the crew."],
+"Post-Alabasta":["Anime-only side stories after leaving Alabasta, as the crew settles down and gets to know Robin.","Light, standalone adventures before the next island."],
+"Goat Island":["Anime-only: the crew finds an island with an old man, his goats and a greedy moneylender.","The crew helps the old man and moves on."],
+"Ruluka Island":["Anime-only: the crew gets caught up in a mystery around a strange rainbow mist.","They solve the mystery and leave the island behind."],
+"Jaya":["A ship falls from the sky and the Log Pose points up. In a rough pirate town, Luffy meets Blackbeard and Montblanc Cricket, who believes in a sky island and a lost city of gold.","Luffy beats the bully Bellamy, and Cricket's crew helps launch the Going Merry into the sky on a giant water spout."],
+"Skypiea":["High in the clouds, the crew finds an island ruled by Enel, a self-proclaimed god with lightning powers, and a long war between sky people and the Shandia.","Enel tries to destroy the island. Luffy, immune to lightning because he is rubber, defeats him and rings the golden bell to prove Cricket right."],
+"G-8":["Anime-only: the Going Merry crashes into a Marine fortress, and the crew has to escape without getting caught.","The crew and the ship slip away from the base."],
+"Long Ring Long Land":["The crew is challenged to a Davy Back Fight, a pirate game where the losers give up crewmates, by Foxy the Silver Fox.","Luffy wins the final match. Admiral Aokiji appears and freezes Robin and Luffy before letting them go."],
+"Ocean's Dream":["Anime-only: the crew wakes up with their memories gone.","They get their memories back and set sail again."],
+"Foxy's Return":["Anime-only: Foxy comes back for a rematch.","Foxy is beaten again and the crew moves on."],
+"Water 7":["In a city of canals and master shipwrights, the crew learns the Going Merry can't be repaired. Usopp and Luffy fall out, and Robin leaves without explaining why.","Government agents of CP9 are revealed among the shipwrights. They take Robin and Franky away to the judicial island of Enies Lobby."],
+"Enies Lobby":["The crew storms the World Government's island to save Robin. Her past is revealed, and Luffy burns the government's flag as a declaration of war.","Every crew member beats a CP9 agent, and Luffy beats Lucci. The Going Merry comes to rescue them one last time, and the crew says goodbye to her."],
+"Post-Enies Lobby":["Back in Water 7, Luffy's grandfather Garp visits and reveals Luffy's father. Franky builds a new ship, the Thousand Sunny.","Franky joins, Usopp comes back, and the crew sets sail on the Sunny with new bounties."],
+"Ice Hunter":["Anime-only: a family of pirate hunters steals the Sunny's flag.","The crew gets their flag back."],
+"Thriller Bark":["A giant ghost ship traps the crew. They meet Brook, a living skeleton, and Gecko Moria, a Warlord who steals shadows to power his zombies.","Luffy defeats Moria. The Warlord Kuma attacks, and Zoro takes Luffy's pain to save him. Brook joins the crew."],
+"Spa Island":["Anime-only: the crew relaxes at a spa island.","Foxy shows up again, and the crew moves on."],
+"Sabaody Archipelago":["Near the Red Line, the crew gets the Sunny coated for the trip to Fish-Man Island and meets other rookie pirates. Their friend Camie is kidnapped for a slave auction.","Luffy punches a World Noble. An admiral attacks, and Kuma sends each crew member flying to a different island."],
+"Boss Luffy Specials":["Anime-only comedy specials set in an old-Japan style world with the crew in new roles.","Just for fun, with no story impact."],
+"Amazon Lily":["Luffy lands on an island of women warriors ruled by Boa Hancock, a Warlord.","Luffy learns his brother Ace is about to be executed, and Hancock helps him get into the great prison, Impel Down."],
+"Impel Down":["Luffy breaks into the world's toughest prison to save Ace, teaming up with old enemies like Buggy and Mr. 3.","Ace has already been moved. Luffy and an army of escaped prisoners break out and head for Marineford."],
+"Little East Blue":["Anime-only prequel to the Strong World movie.","The crew wraps up the adventure and returns to the main story."],
+"Marineford":["The Marines and the Warlords face Whitebeard's pirates in a huge war over Ace's execution, and Luffy charges in to save his brother.","Luffy frees Ace, but Ace dies protecting him. Whitebeard falls, Blackbeard grows stronger and Shanks ends the war."],
+"Post-War":["Luffy mourns Ace, and flashbacks show his childhood with Ace and Sabo.","Luffy decides to train for two years with Rayleigh before reuniting with the crew."],
+"Return to Sabaody":["Two years later, the crew reunites at Sabaody, stronger than before, while impostors use their names.","They dive the Sunny underwater toward Fish-Man Island."],
+"Fish-Man Island":["Under the sea, the crew visits the Fish-Man kingdom and meets Princess Shirahoshi. Hody Jones plots to take over the kingdom.","Luffy beats Hody and earns the kingdom's trust. Jinbe gives Luffy blood to save him."],
+"Z's Ambition":["Anime-only lead-in to One Piece Film Z.","The crew meets the ex-admiral Z's forces."],
+"Punk Hazard":["On an island that is half fire and half ice, the crew finds kidnapped children and the scientist Caesar Clown. Luffy forms an alliance with Trafalgar Law.","Luffy beats Caesar, the children are saved and the alliance sets sail for Dressrosa."],
+"Caesar Retrieval":["Anime-only: Caesar is snatched away.","The crew gets him back."],
+"Dressrosa":["The crew reaches a kingdom of toys and fighting arenas ruled by the Warlord Doflamingo. Luffy enters a tournament to win his brother's old Devil Fruit.","Sabo is alive and takes the fruit. Doflamingo traps the island in a cage of strings, and Luffy beats him with Gear Fourth."],
+"Silver Mine":["Anime-only: Luffy and friends end up trapped in a silver mine.","They break free and the story continues."],
+"Zou":["The crew reunites on an island on the back of a giant elephant, home of the Mink tribe. Sanji is gone.","Sanji has been taken to marry into Big Mom's family. Luffy goes to get him back while the others head to Wano."],
+"Marine Rookie":["Anime-only: a young Marine's story.","The adventure wraps up and the main story continues."],
+"Whole Cake Island":["In Big Mom's land of sweets, Luffy tries to rescue Sanji from a forced wedding.","The wedding was a trap. The crew escapes, Luffy beats Katakuri and Jinbe joins the crew."],
+"Reverie":["World leaders meet at the Holy Land, while the crew's friends from past kingdoms gather.","Big changes rock the world, and Luffy's bounty soars."],
+"Wano Country":["In the samurai land of Wano, the crew joins forces with the late Kozuki Oden's followers to overthrow Kaido and the Shogun Orochi.","Luffy awakens Gear Fifth and defeats Kaido. Wano is freed and Luffy becomes an Emperor of the Sea."],
+"Cidre Guild":["Anime-only tie-in to the One Piece Stampede movie.","A short adventure."],
+"Uta's Past":["Anime-only tie-in to One Piece Film Red, about Luffy's childhood friend Uta.","A short look back."],
+"Egghead":["On a futuristic island, the crew meets the genius scientist Dr. Vegapunk, who wants to defect.","The World Government attacks, Vegapunk shares a message with the world and the crew escapes with help from giants."],
+"Elbaf":["The crew finally reaches Elbaf, the land of the giants.","The arc is still ongoing."]
+};
+const KEY = "op-checklist-v1", TKEY = "op-theme";
+let watched = new Set();
+// progress is saved three ways (localStorage, cookie, IndexedDB) because some HTML viewer apps wipe one of them
+const ranges = arr => { const v = [...arr].sort((a,b)=>a-b), out = []; for (const n of v) { const l = out.at(-1); l && l[1] === n - 1 ? l[1] = n : out.push([n, n]); } return out.map(([a,b]) => a === b ? a : `${a}-${b}`).join(","); };
+const unranges = t => { const set = new Set(); for (const part of (t || "").split(",")) { const m = /^\s*(\d+)(?:-(\d+))?\s*$/.exec(part); if (m) for (let i = +m[1]; i <= +(m[2] || m[1]) && i <= 2000; i++) set.add(i); } return set; };
+try { watched = new Set(JSON.parse(localStorage.getItem(KEY) || "[]")); } catch {}
+if (!watched.size) { try { const c = document.cookie.split("; ").find(x => x.startsWith(KEY + "=")); if (c) watched = unranges(decodeURIComponent(c.slice(KEY.length + 1))); } catch {} }
+function idb(mode, fn){ return new Promise((res, rej) => { try { const r = indexedDB.open("op-voyage", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("kv");
+  r.onsuccess = () => { const tx = r.result.transaction("kv", mode), q = fn(tx.objectStore("kv")); tx.oncomplete = () => res(q?.result); tx.onerror = () => rej(tx.error); };
+  r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
+const save = () => {
+  const code = ranges(watched);
+  try { localStorage.setItem(KEY, JSON.stringify([...watched])); } catch {}
+  try { document.cookie = `${KEY}=${encodeURIComponent(code)}; max-age=31536000; path=/; SameSite=Lax`; } catch {}
+  idb("readwrite", st => st.put(code, KEY)).catch(() => {});
+};
+// IndexedDB answers late: if the faster stores came back empty, restore from it
+if (!watched.size) idb("readonly", st => st.get(KEY)).then(code => { if (code && !watched.size) { watched = unranges(code); refresh(); } }).catch(() => {});
+const eps = r => r.flatMap(([a,b]) => Array.from({length:b-a+1},(_,i)=>a+i));
+const rangeText = r => r.map(([a,b]) => a===b ? a : `${a}–${b}`).join(", ");
+const fillerEp = new Set(eps(FILLER));
+const guide = n => `https://onepiece.fandom.com/wiki/Episode_${n}`;
+const chev = '<svg width="18" height="18" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const $ = id => document.getElementById(id);
+
+const main = $("main"), arcs = [], sagas = [], arcOf = new Map();
+let total = 0;
+SAGAS.forEach(([saga, color, scene, list], si) => {
+  const sec = document.createElement("section");
+  sec.className = "saga"; sec.id = "saga-" + si; sec.style.setProperty("--c", color);
+  const all = list.flatMap(a => eps(a[2])).sort((a,b)=>a-b);
+  sec.innerHTML = `<div class="shead"><svg class="scene" viewBox="0 0 170 100" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">${SCENES[scene]}</svg>
+    <div class="medal">${si+1}</div><div><h2>${saga} Saga</h2><small>Episodes ${all[0]}–${all.at(-1)}</small></div><div class="sp"></div><span class="stamp">Complete</span></div><div class="sbar"><i></i></div><div class="arcs"></div>`;
+  const box = sec.querySelector(".arcs");
+  list.forEach(([name, type, ranges]) => {
+    const nums = eps(ranges); total += nums.length;
+    const el = document.createElement("div");
+    el.className = "arc " + type;
+    const id = "a" + arcs.length;
+    el.innerHTML = `<div class="row">
+        <input type="checkbox" id="${id}" aria-label="Mark all of ${name} watched">
+        <label class="name" for="${id}"><strong>${name}</strong><span class="pill ${type}">${type}</span><span class="eps">Ep ${rangeText(ranges)} · ${nums.length} episode${nums.length>1?"s":""}</span></label>
+        <span class="count"></span>
+        <button class="tog" type="button" aria-expanded="false" aria-label="Show ${name} episodes">${chev}</button>
+      </div>
+      <div class="grid">${nums.map(n=>`<span class="ep${fillerEp.has(n)?" f":""}${MUST.has(n)?" m":""}" data-n="${n}" role="checkbox" tabindex="0" aria-label="Episode ${n}${MUST.has(n)?", must-watch":""}">${n}</span>`).join("")}</div>`;
+    const cb = el.querySelector("input");
+    cb.addEventListener("change", () => { nums.forEach(n => cb.checked ? watched.add(n) : watched.delete(n)); refresh(); });
+    el.querySelector(".tog").addEventListener("click", () => setOpen(el, !el.classList.contains("open")));
+    const arc = {el, nums, cb, name, type, si, saga};
+    nums.forEach(n => arcOf.set(n, arc));
+    arcs.push(arc); box.appendChild(el);
+  });
+  sagas.push({sec, name: saga, color, all});
+  main.appendChild(sec);
+});
+function setOpen(el, o){ el.classList.toggle("open", o); el.querySelector(".tog").setAttribute("aria-expanded", o); }
+
+// sea chart: islands along a wavy route, ship at your progress
+const N = sagas.length, W = 1100, H = 230;
+const pts = sagas.map((_, i) => [60 + i * (W - 120) / (N - 1), i % 2 ? 156 : 78]);
+const d = pts.map((p, i) => i ? `C${pts[i-1][0]+49},${pts[i-1][1]} ${p[0]-49},${p[1]} ${p[0]},${p[1]}` : `M${p[0]},${p[1]}`).join(" ");
+$("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Voyage chart of the sagas">
+  <path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+  <path id="trail" d="${d}" fill="none" stroke="#f5b82e" stroke-width="5" stroke-linecap="round"/>
+  ${pts.map(([x,y],i)=>`<g class="isle" data-i="${i}">
+    <ellipse cx="${x}" cy="${y+16}" rx="34" ry="9" fill="rgba(255,255,255,.12)"/>
+    <ellipse cx="${x}" cy="${y+8}" rx="26" ry="10" fill="#e9cf8f"/>
+    <circle cx="${x}" cy="${y-2}" r="19" fill="${sagas[i].color}" stroke="#fff" stroke-width="3"/>
+    <text x="${x}" y="${y+4}" style="font:400 18px Bangers,cursive;fill:#fff">${i+1}</text>
+    <path class="flag" d="M${x+14} ${y-18}v-22l16 6-16 6" fill="#f5b82e" stroke="#0a2540" stroke-width="1.5" opacity="0"/>
+    <text x="${x}" y="${y+44}">${sagas[i].name}</text></g>`).join("")}
+  <g class="ship" id="ship"><g class="bob">
+    <path d="M-20 0h40l-8 12h-24z" fill="#7a4a24" stroke="#0a2540" stroke-width="2"/>
+    <path d="M0 0v-36" stroke="#0a2540" stroke-width="2.5"/>
+    <path d="M2 -33q16 10 0 28z" fill="#fff" stroke="#0a2540" stroke-width="1.5"/>
+    <path d="M-2 -31q-14 10 0 24z" fill="#fff6dc" stroke="#0a2540" stroke-width="1.5"/>
+    <path d="M0 -36l10 3-10 3z" fill="#e0442f"/></g></g>
+</svg>`;
+const trail = $("trail"), ship = $("ship"), L = trail.getTotalLength();
+trail.style.strokeDasharray = L;
+const flags = document.querySelectorAll(".isle .flag");
+document.querySelectorAll(".isle").forEach(g => g.addEventListener("click", () => sagas[+g.dataset.i].sec.scrollIntoView({behavior:"smooth"})));
+
+const skipping = () => document.body.classList.contains("hidefiller");
+function tickUpTo(n){ for (let i = 1; i <= n; i++) if (!(skipping() && fillerEp.has(i))) watched.add(i); watched.add(n); }
+// tap = "watched up to here": ticks everything before, clears everything after; tap the latest again to untick it
+function toggleEp(t){
+  const n = +t.dataset.n, last = watched.size ? Math.max(...watched) : 0;
+  if (n === last) watched.delete(n);
+  else { for (const w of [...watched]) if (w > n) watched.delete(w); tickUpTo(n); }
+  refresh();
+}
+// tap opens the episode sheet; long press (or Space) marks watched up to here
+let pressTimer = null, pressed = null, longFired = false, startXY = null;
+const endPress = () => { clearTimeout(pressTimer); pressed?.classList.remove("press"); pressed = null; };
+main.addEventListener("pointerdown", e => {
+  const t = e.target.closest(".ep"); if (!t) return;
+  longFired = false; pressed = t; startXY = [e.clientX, e.clientY]; t.classList.add("press");
+  pressTimer = setTimeout(() => { longFired = true; try { navigator.vibrate?.(25); } catch {} const el = pressed; endPress(); toggleEp(el); }, 450);
+});
+main.addEventListener("pointermove", e => { if (pressed && Math.hypot(e.clientX - startXY[0], e.clientY - startXY[1]) > 10) endPress(); });
+["pointerup","pointercancel","pointerleave"].forEach(ev => main.addEventListener(ev, endPress));
+main.addEventListener("contextmenu", e => { if (e.target.closest(".ep")) e.preventDefault(); });
+main.addEventListener("click", e => { const t = e.target.closest(".ep"); if (!t) return; if (longFired) { longFired = false; return; } openSheet(+t.dataset.n); });
+main.addEventListener("keydown", e => { const t = e.target.closest(".ep"); if (!t) return;
+  if (e.key === " ") { e.preventDefault(); toggleEp(t); } else if (e.key === "Enter") { e.preventDefault(); openSheet(+t.dataset.n); } });
+
+const sheet = $("sheet");
+let sheetN = null, lastFocus = null;
+function openSheet(n){
+  const a = arcOf.get(n); if (!a) return;
+  sheetN = n; lastFocus = document.activeElement;
+  $("shNum").textContent = "Episode " + n;
+  $("shArc").textContent = `${a.name} · ${a.saga} Saga`;
+  const f = fillerEp.has(n);
+  $("shTags").innerHTML = `<span class="pill ${f ? "filler" : "canon"}">${f ? "filler" : "canon"}</span>${MUST.has(n) ? '<span class="must">must-watch</span>' : ""}<span class="shstate">${watched.has(n) ? "Watched" : "Not watched yet"}</span>`;
+  $("shStory").href = guide(n);
+  showStory(n);
+  $("shMark").textContent = watched.has(n) && Math.max(...watched) === n ? "Unmark this episode" : "Watched up to here";
+  sheet.hidden = false; requestAnimationFrame(() => sheet.classList.add("on"));
+  $("shMark").focus();
+}
+
+// live episode details from Jikan (MyAnimeList). Claude-hosted pages block outside requests, so this only fills in on a self-hosted copy.
+const EKEY = "op-jikan-v1";
+let epCache = {}; try { epCache = JSON.parse(localStorage.getItem(EKEY) || "{}"); } catch {}
+let jikanBlocked = false;
+function paintEp(n, d, msg){
+  if (sheetN !== n) return;
+  $("epi").hidden = !d && !msg;
+  $("epTitle").textContent = d ? (d.t || `Episode ${n}`) : `Episode ${n}`;
+  $("epText").textContent = d ? (d.s || "No synopsis has been written for this episode yet.") : (msg || "");
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function loadEp(n){
+  if (epCache[n]) return paintEp(n, epCache[n]);
+  if (jikanBlocked) return paintEp(n, null);
+  paintEp(n, null, "Loading episode details…");
+  for (let tries = 0; tries < 3; tries++) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await fetch(`https://api.jikan.moe/v4/anime/21/episodes/${n}`, {signal: ctl.signal});
+      clearTimeout(timer);
+      if (r.status === 429 || r.status >= 500) { await wait(1200 * (tries + 1)); continue; } // busy: back off and retry
+      if (!r.ok) return paintEp(n, null, "No details for this episode on MyAnimeList yet.");
+      const d = (await r.json()).data || {};
+      epCache[n] = {t: String(d.title || ""), s: String(d.synopsis || "").replace(/\s*\(Source:[^)]*\)\s*$/i, "")};
+      try { localStorage.setItem(EKEY, JSON.stringify(epCache)); } catch {}
+      return paintEp(n, epCache[n]);
+    } catch (e) {
+      clearTimeout(timer);
+      if (e?.name === "AbortError") return paintEp(n, null, "Episode details are taking too long. Try again in a moment.");
+      jikanBlocked = true; return paintEp(n, null); // blocked (e.g. Claude-hosted page) or offline: arc summary stays
+    }
+  }
+  paintEp(n, null, "MyAnimeList is busy right now. Close and reopen the episode in a moment.");
+}
+function showStory(n){
+  loadEp(n);
+  const a = arcOf.get(n), st = STORY[a.name] || ["", ""], i = a.nums.indexOf(n) + 1;
+  $("stTitle").textContent = a.name + " arc";
+  $("stWhere").textContent = `Episode ${i} of ${a.nums.length} in this arc`;
+  $("stText").textContent = st[0];
+  $("stEndText").textContent = st[1];
+  $("stEnd").hidden = !st[1]; $("stEnd").open = false;
+}
+function closeSheet(){ sheet.classList.remove("on"); setTimeout(() => { sheet.hidden = true; }, 200); lastFocus?.focus?.(); }
+$("shMark").addEventListener("click", () => { toggleEp({dataset:{n:sheetN}}); closeSheet(); });
+$("shClose").addEventListener("click", closeSheet);
+sheet.addEventListener("click", e => { if (e.target === sheet) closeSheet(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { if (!sheet.hidden) closeSheet(); if (!bk.hidden) closeBk(); } });
+
+function goTo(n){
+  const a = arcOf.get(n); if (!a) return;
+  a.el.classList.remove("nomatch"); a.el.closest(".saga").classList.remove("nomatch");
+  setOpen(a.el, true);
+  const chip = a.el.querySelector(`.ep[data-n="${n}"]`);
+  chip.scrollIntoView({behavior:"smooth", block:"center"});
+  chip.classList.remove("hit"); void chip.offsetWidth; chip.classList.add("hit");
+}
+
+let next = 1, firstLoad = true;
+function refresh(){
+  let done = 0;
+  for (const a of arcs) {
+    const c = a.nums.filter(n => watched.has(n)).length;
+    a.cb.checked = c === a.nums.length; a.cb.indeterminate = c > 0 && c < a.nums.length;
+    a.el.classList.toggle("done", a.cb.checked); if (a.cb.checked) done++;
+    a.el.querySelector(".count").textContent = `${c}/${a.nums.length}`;
+  }
+  next = null;
+  for (let i = 1; i <= total; i++) if (!watched.has(i) && !(skipping() && fillerEp.has(i))) { next = i; break; }
+  document.querySelectorAll(".ep").forEach(s => { const n = +s.dataset.n, w = watched.has(n);
+    s.classList.toggle("w", w); s.classList.toggle("nx", n === next); s.setAttribute("aria-checked", w); });
+  sagas.forEach((s, i) => {
+    const c = s.all.filter(n => watched.has(n)).length;
+    s.sec.querySelector(".sp").textContent = `${c}/${s.all.length}`;
+    s.sec.querySelector(".sbar i").style.width = (c / s.all.length * 100) + "%";
+    s.sec.classList.toggle("complete", c === s.all.length);
+    flags[i].setAttribute("opacity", c === s.all.length ? 1 : 0);
+  });
+  const pct = Math.round(watched.size / total * 1000) / 10;
+  $("pct").textContent = pct + "%"; $("watched").textContent = watched.size; $("total").textContent = total;
+  $("arcs").textContent = `${done}/${arcs.length}`; $("bar").style.width = pct + "%";
+  $("stars").textContent = `${[...MUST].filter(n => watched.has(n)).length}/${MUST.size}`;
+  let pos = N - 1;
+  if (next) { const si = sagas.findIndex(s => next <= s.all.at(-1)), s = sagas[si];
+    pos = si + (si < N - 1 ? Math.min(1, (next - s.all[0]) / s.all.length) : 0); }
+  const p = trail.getPointAtLength(L * pos / (N - 1));
+  ship.setAttribute("transform", `translate(${p.x},${p.y - 8})`);
+  trail.style.strokeDashoffset = L * (1 - pos / (N - 1));
+  if (firstLoad) { const c = $("chart"); c.scrollLeft = p.x / W * c.scrollWidth - c.clientWidth / 2; firstLoad = false; }
+  const a = next && arcOf.get(next);
+  $("nextNum").textContent = next ? "Ep " + next : "Done!";
+  $("nextArc").innerHTML = a ? a.name.replace(/&/g,"&amp;") + (MUST.has(next) ? '<span class="must">must-watch</span>' : "") : "You're all caught up";
+  $("nextSaga").textContent = a ? `${a.saga} Saga · ${fillerEp.has(next) ? "filler" : "canon"}` : "Wait for the next episode";
+  $("nextLink").hidden = !next; if (next) $("nextLink").href = guide(next);
+  $("markNext").disabled = $("openNext").disabled = !next;
+  save();
+}
+
+$("markNext").addEventListener("click", () => { if (next) { tickUpTo(next); refresh(); } });
+$("openNext").addEventListener("click", () => next && goTo(next));
+
+// search: a number jumps to that episode; words filter arcs and sagas
+const q = $("q");
+function search(){
+  const v = q.value.trim().toLowerCase(), n = /^\d+$/.test(v) ? +v : null;
+  let shown = 0;
+  for (const a of arcs) {
+    const hit = !v || n !== null || a.name.toLowerCase().includes(v) || a.saga.toLowerCase().includes(v);
+    a.el.classList.toggle("nomatch", !hit); if (hit) shown++;
+  }
+  sagas.forEach(s => s.sec.classList.toggle("nomatch", !s.sec.querySelector(".arc:not(.nomatch)")));
+  $("empty").style.display = shown ? "none" : "block";
+  const a = n !== null && arcOf.get(n);
+  $("result").classList.toggle("show", !!a || (n !== null));
+  if (n !== null) $("resultBody").innerHTML = a
+    ? `<span>Episode ${n} · ${a.name.replace(/&/g,"&amp;")} · ${fillerEp.has(n) ? "filler" : "canon"}${MUST.has(n) ? ' <span class="must">must-watch</span>' : ""}</span><a href="${guide(n)}" target="_blank" rel="noopener">Episode title and summary</a>`
+    : `<span>There's no episode ${n} on the list yet.</span>`;
+}
+q.addEventListener("input", search);
+q.addEventListener("keydown", e => { if (e.key === "Enter") { const v = q.value.trim(); if (/^\d+$/.test(v)) goTo(+v); q.blur(); } if (e.key === "Escape") { q.value = ""; search(); } });
+
+const fb = $("filler");
+fb.addEventListener("click", () => { const on = document.body.classList.toggle("hidefiller"); fb.setAttribute("aria-pressed", on); refresh(); });
+// must-watch: open every arc that holds a starred episode
+const mb = $("mustOnly");
+mb.addEventListener("click", () => {
+  const on = mb.getAttribute("aria-pressed") !== "true"; mb.setAttribute("aria-pressed", on);
+  arcs.forEach(a => setOpen(a.el, on && a.nums.some(n => MUST.has(n))));
+  if (on) document.querySelector(".ep.m").scrollIntoView({behavior:"smooth", block:"center"});
+});
+// confirm() is blocked in the artifact sandbox, so reset needs a second tap
+// backup: progress as compact ranges like "1-642,650"
+const encode = () => { const v = [...watched].sort((a,b)=>a-b), out = []; for (let i = 0; i < v.length; i++) { let j = i; while (v[j+1] === v[j] + 1) j++; out.push(i === j ? `${v[i]}` : `${v[i]}-${v[j]}`); i = j; } return out.join(","); };
+function decode(code){
+  const set = new Set();
+  for (const part of code.replace(/\s+/g, "").split(",").filter(Boolean)) {
+    const m = /^(\d+)(?:-(\d+))?$/.exec(part); if (!m) return null;
+    const a = +m[1], b = +(m[2] || m[1]); if (a < 1 || b > total || a > b) return null;
+    for (let i = a; i <= b; i++) set.add(i);
+  }
+  return set;
+}
+console.assert(decode("1-3,5").size === 4 && decode("0-2") === null && decode("x") === null, "backup decode broken");
+const bk = $("bk");
+$("backup").addEventListener("click", () => { $("bkCode").value = encode() || "(nothing ticked yet)"; $("bkIn").value = ""; $("bkMsg").textContent = ""; bk.hidden = false; requestAnimationFrame(() => bk.classList.add("on")); });
+const closeBk = () => { bk.classList.remove("on"); setTimeout(() => { bk.hidden = true; }, 200); };
+$("bkClose").addEventListener("click", closeBk);
+bk.addEventListener("click", e => { if (e.target === bk) closeBk(); });
+$("bkCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("bkCode").value); $("bkMsg").textContent = "Copied."; }
+  catch { $("bkCode").select(); $("bkMsg").textContent = "Select the code above and copy it."; }
+});
+$("bkLoad").addEventListener("click", () => {
+  const set = decode($("bkIn").value);
+  if (!set || !set.size) { $("bkMsg").textContent = "That code doesn't look right. Check it and try again."; return; }
+  watched = set; refresh(); $("bkMsg").textContent = `Loaded ${set.size} episodes.`;
+});
+const rb = $("reset"); let armed = null;
+rb.addEventListener("click", () => {
+  if (armed) { clearTimeout(armed); armed = null; rb.textContent = "Reset"; watched.clear(); refresh(); return; }
+  rb.textContent = "Tap again to clear"; armed = setTimeout(() => { armed = null; rb.textContent = "Reset"; }, 3000);
+});
+
+// night sea: follows the device unless the person picks
+const root = document.documentElement, tb = $("theme");
+const moon = '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="#f5b82e"/></svg>';
+const sun = '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#f5b82e"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="#f5b82e" stroke-width="2.2" stroke-linecap="round"/></svg>';
+let picked = null; try { picked = localStorage.getItem(TKEY); } catch {}
+const isDark = () => (root.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+function paintTheme(){ const dk = isDark(); document.body.classList.toggle("night", dk); tb.innerHTML = dk ? sun : moon; tb.setAttribute("aria-label", dk ? "Switch to day" : "Switch to night sea"); }
+if (picked) root.dataset.theme = picked;
+tb.addEventListener("click", () => { root.dataset.theme = isDark() ? "light" : "dark"; try { localStorage.setItem(TKEY, root.dataset.theme); } catch {} paintTheme(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintTheme);
+new MutationObserver(paintTheme).observe(root, {attributes:true, attributeFilter:["data-theme"]});
+paintTheme();
+
+const seen = arcs.flatMap(a => a.nums);
+console.assert(seen.length === 1181 && new Set(seen).size === 1181, "episode coverage broken");
+console.assert(arcs.every(a => STORY[a.name]), "arc without summary");
+console.assert([...MUST].every(n => arcOf.has(n)), "must-watch outside the list");
+refresh();
+}
+</script>
+</body>
+</html>
